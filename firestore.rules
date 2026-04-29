@@ -44,7 +44,7 @@ service cloud.firestore {
              data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
              data.email is string && data.email.size() <= 100 &&
              data.role in ['patient', 'doctor'] &&
-             data.createdAt is string;
+             (data.createdAt is string || data.createdAt is timestamp);
     }
 
     function isValidDoctorProfile(data) {
@@ -71,7 +71,7 @@ service cloud.firestore {
              data.date is string && data.date.size() == 10 &&
              data.time is string && data.time.size() <= 10 &&
              data.status in ['pending', 'confirmed', 'cancelled', 'completed'] &&
-             data.createdAt is string;
+             (data.createdAt is string || data.createdAt is timestamp);
     }
 
     function isValidMedicalRecord(data) {
@@ -89,7 +89,7 @@ service cloud.firestore {
              data.prescription is string && data.prescription.size() <= 2000 &&
              data.notes is string && data.notes.size() <= 5000 &&
              data.fileUrl is string &&
-             data.timestamp is string;
+             (data.timestamp is string || data.timestamp is timestamp);
     }
 
     // --- Collection Routes ---

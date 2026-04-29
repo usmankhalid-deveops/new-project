@@ -53,6 +53,7 @@ const BookAppointment: React.FC = () => {
         patientName: profile.name,
         doctorId: doctor.userId,
         doctorName: doctor.name,
+        specialization: doctor.specialization,
         date,
         time,
         status: 'pending',
