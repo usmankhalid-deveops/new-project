@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Base user profile for both patients and doctors",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["patient", "doctor"] }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "DoctorProfile": {
+      "title": "Doctor Profile",
+      "description": "Extended profile information for doctor users",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "specialization": { "type": "string" },
+        "experience": { "type": "string" },
+        "availableDays": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["userId", "specialization", "experience"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Appointment record between patient and doctor",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled", "completed"] }
+      },
+      "required": ["patientId", "doctorId", "date", "time", "status"]
+    },
+    "MedicalRecord": {
+      "title": "Medical Record",
+      "description": "Medical history record for a patient",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "diagnosis": { "type": "string" },
+        "prescription": { "type": "string" },
+        "notes": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientId", "doctorId", "diagnosis", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Main user collection"
+    },
+    "/doctors/{doctorId}": {
+      "schema": "DoctorProfile",
+      "description": "Doctor details collection (doctorId matches userId)"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Appointments collection"
+    },
+    "/medicalRecords/{recordId}": {
+      "schema": "MedicalRecord",
+      "description": "Medical records collection"
+    }
+  }
+}

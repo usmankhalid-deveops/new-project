@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isDoctor() {
+      return isSignedIn() && getUserRole() == 'doctor';
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role in ['patient', 'doctor'] &&
+             data.createdAt is string;
+    }
+
+    function isValidDoctorProfile(data) {
+      return data.keys().hasAll(['userId', 'name', 'specialization', 'experience', 'availableDays']) &&
+             data.userId == request.auth.uid &&
+             data.name is string &&
+             data.specialization is string && data.specialization.size() <= 100 &&
+             data.experience is string && data.experience.size() <= 2000 &&
+             data.availableDays is list && data.availableDays.size() <= 7;
+    }
+
+    function isValidAppointment(data) {
+      let requiredKeys = [
+        'patientId', 'patientName', 'doctorId', 'doctorName', 
+        'specialization', 'date', 'time', 'status', 'createdAt'
+      ];
+      return data.keys().hasAll(requiredKeys) &&
+             data.keys().size() == 9 &&
+             data.patientId is string && isValidId(data.patientId) &&
+             data.patientName is string &&
+             data.doctorId is string && isValidId(data.doctorId) &&
+             data.doctorName is string &&
+             data.specialization is string &&
+             data.date is string && data.date.size() == 10 &&
+             data.time is string && data.time.size() <= 10 &&
+             data.status in ['pending', 'confirmed', 'cancelled', 'completed'] &&
+             data.createdAt is string;
+    }
+
+    function isValidMedicalRecord(data) {
+      let requiredKeys = [
+        'patientId', 'patientName', 'doctorId', 'doctorName', 
+        'diagnosis', 'prescription', 'notes', 'fileUrl', 'timestamp'
+      ];
+      return data.keys().hasAll(requiredKeys) &&
+             data.keys().size() == 9 &&
+             data.patientId is string && isValidId(data.patientId) &&
+             data.patientName is string &&
+             data.doctorId == request.auth.uid &&
+             data.doctorName is string &&
+             data.diagnosis is string && data.diagnosis.size() <= 1000 &&
+             data.prescription is string && data.prescription.size() <= 2000 &&
+             data.notes is string && data.notes.size() <= 5000 &&
+             data.fileUrl is string &&
+             data.timestamp is string;
+    }
+
+    // --- Collection Routes ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false; // Users should not be listable by everyone
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && 
+                      isValidUser(incoming()) && 
+                      incoming().role == existing().role; // Role is immutable
+    }
+
+    match /doctors/{doctorId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(doctorId) && 
+                      getAfter(/databases/$(database)/documents/users/$(doctorId)).data.role == 'doctor' && 
+                      isValidDoctorProfile(incoming());
+      allow update: if isOwner(doctorId) && isDoctor() && isValidDoctorProfile(incoming());
+    }
+
+    match /appointments/{appointmentId} {
+      allow get: if isSignedIn() && (isOwner(existing().patientId) || isOwner(existing().doctorId));
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || resource.data.doctorId == request.auth.uid);
+      
+      allow create: if isSignedIn() && 
+                      isOwner(incoming().patientId) && 
+                      isValidAppointment(incoming()) &&
+                      incoming().status == 'pending'; // Initial status
+
+      allow update: if isSignedIn() && isValidAppointment(incoming()) && (
+        // Action: Doctor confirms/completes
+        (isOwner(existing().doctorId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        // Action: Patient cancels
+        (isOwner(existing().patientId) && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        // Action: Reschedule (shared fields)
+        ((isOwner(existing().patientId) || isOwner(existing().doctorId)) && incoming().diff(existing()).affectedKeys().hasOnly(['date', 'time', 'status']))
+      );
+      
+      allow delete: if false; // Soft deletes via status preferred
+    }
+
+    match /medicalRecords/{recordId} {
+      allow get: if isSignedIn() && (isOwner(existing().patientId) || isOwner(existing().doctorId));
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || resource.data.doctorId == request.auth.uid);
+      
+      allow create: if isDoctor() && isValidMedicalRecord(incoming());
+      allow update: if isDoctor() && isOwner(existing().doctorId) && isValidMedicalRecord(incoming());
+      allow delete: if false;
+    }
+  }
+}
