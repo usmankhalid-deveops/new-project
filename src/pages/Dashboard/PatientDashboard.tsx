@@ -23,30 +23,37 @@ const PatientDashboard: React.FC = () => {
         const apptPath = 'appointments';
         const recordPath = 'medicalRecords';
 
+        // Fetch appointments (sort on client side to avoid index requirement)
         const apptQuery = query(
           collection(db, apptPath),
           where('patientId', '==', user.uid),
-          orderBy('createdAt', 'desc'),
-          limit(3)
+          limit(10) // Fetch more then slice
         );
         
         try {
           const apptSnap = await getDocs(apptQuery);
-          setRecentAppointments(apptSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
+          const appts = apptSnap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Appointment))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 3);
+          setRecentAppointments(appts);
         } catch (err) {
           handleFirestoreError(err, OperationType.GET, apptPath);
         }
 
-        // Fetch recent records
+        // Fetch records (sort on client side)
         const recordQuery = query(
           collection(db, recordPath),
           where('patientId', '==', user.uid),
-          orderBy('timestamp', 'desc'),
-          limit(3)
+          limit(10)
         );
         try {
           const recordSnap = await getDocs(recordQuery);
-          setRecentRecords(recordSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MedicalRecord)));
+          const records = recordSnap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as MedicalRecord))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 3);
+          setRecentRecords(records);
         } catch (err) {
           handleFirestoreError(err, OperationType.GET, recordPath);
         }

@@ -5,7 +5,7 @@ import Layout from './components/Layout';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 
-// lazy/placeholder imports for now to avoid errors while building
+import Home from './pages/Home';
 import PatientDashboard from './pages/Dashboard/PatientDashboard';
 import DoctorDashboard from './pages/Dashboard/DoctorDashboard';
 import DoctorList from './pages/Doctors/DoctorList';
@@ -28,7 +28,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Home />} />
           
           <Route path="/dashboard" element={
             <ProtectedRoute>

@@ -47,7 +47,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <Stethoscope className="text-white w-5 h-5" />
           </div>
-          <span className="font-bold text-xl text-slate-900">HealSync</span>
+          <span className="font-bold text-xl text-slate-900">Heal Sync</span>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -80,7 +80,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
               <Stethoscope className="text-white w-6 h-6" />
             </div>
-            <span className="font-bold text-2xl text-slate-900 tracking-tight">HealSync</span>
+            <span className="font-bold text-2xl text-slate-900 tracking-tight">Heal Sync</span>
           </div>
 
           <div className="space-y-1 flex-1">

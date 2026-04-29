@@ -24,12 +24,14 @@ const DoctorDashboard: React.FC = () => {
         const apptQuery = query(
           collection(db, apptPath),
           where('doctorId', '==', user.uid),
-          orderBy('createdAt', 'desc')
+          limit(50)
         );
         
         try {
           const apptSnap = await getDocs(apptQuery);
-          const apptList = apptSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
+          const apptList = apptSnap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Appointment))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           
           setAppointments(apptList.slice(0, 5)); // Show recent 5
           setStats({
