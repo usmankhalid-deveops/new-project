@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128;
     }
 
     function incoming() {
@@ -28,11 +28,12 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userPath) ? get(userPath).data.role : 'none';
     }
 
     function isDoctor() {
-      return isSignedIn() && getUserRole() == 'doctor';
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
     }
 
     // --- Validation Blueprints ---
@@ -80,7 +81,6 @@ service cloud.firestore {
         'diagnosis', 'prescription', 'notes', 'fileUrl', 'timestamp'
       ];
       return data.keys().hasAll(requiredKeys) &&
-             data.keys().size() == 9 &&
              data.patientId is string && isValidId(data.patientId) &&
              data.patientName is string &&
              data.doctorId == request.auth.uid &&
@@ -96,7 +96,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if false; // Users should not be listable by everyone
+      allow list: if isSignedIn() && isDoctor();
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) && 
                       isValidUser(incoming()) && 
@@ -133,8 +133,8 @@ service cloud.firestore {
     }
 
     match /medicalRecords/{recordId} {
-      allow get: if isSignedIn() && (isOwner(existing().patientId) || isOwner(existing().doctorId));
-      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || resource.data.doctorId == request.auth.uid);
+      allow get: if isSignedIn() && (isOwner(existing().patientId) || isDoctor());
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || isDoctor());
       
       allow create: if isDoctor() && isValidMedicalRecord(incoming());
       allow update: if isDoctor() && isOwner(existing().doctorId) && isValidMedicalRecord(incoming());

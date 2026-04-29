@@ -7,6 +7,7 @@ import { MedicalRecord, Appointment } from '../../types';
 import { FileText, Plus, Search, Calendar, User, Download, X, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
+import { handleFirestoreError, OperationType } from '../../lib/utils';
 
 const MedicalRecords: React.FC = () => {
   const { user, profile } = useAuth();
@@ -28,14 +29,15 @@ const MedicalRecords: React.FC = () => {
       if (!user || !profile) return;
       try {
         const field = profile.role === 'patient' ? 'patientId' : 'doctorId';
+        const recordPath = 'medicalRecords';
         const q = query(
-          collection(db, 'medicalRecords'),
+          collection(db, recordPath),
           where(field, '==', user.uid)
         );
         const snap = await getDocs(q);
         setRecords(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MedicalRecord)));
       } catch (err) {
-        console.error("Error fetching records:", err);
+        handleFirestoreError(err, OperationType.GET, 'medicalRecords');
       } finally {
         setLoading(false);
       }
@@ -49,10 +51,15 @@ const MedicalRecords: React.FC = () => {
     setSubmitting(true);
 
     try {
-      // 1. Find patient by email (simple approach for this exercise)
-      const userQ = query(collection(db, 'users'), where('email', '==', patientEmail));
+      // 1. Find patient by email
+      const usersPath = 'users';
+      const userQ = query(collection(db, usersPath), where('email', '==', patientEmail));
       const userSnap = await getDocs(userQ);
-      if (userSnap.empty) throw new Error("Patient not found with this email");
+      if (userSnap.empty) {
+        alert("Patient not found with this email");
+        setSubmitting(false);
+        return;
+      }
       
       const patientData = userSnap.docs[0].data();
       const patientId = userSnap.docs[0].id;
@@ -66,17 +73,18 @@ const MedicalRecords: React.FC = () => {
 
       const newRecord = {
         patientId,
-        patientName: patientData.name,
+        patientName: patientData.name || 'Unknown Patient',
         doctorId: user.uid,
-        doctorName: profile.name,
-        diagnosis,
-        prescription,
-        notes,
-        fileUrl,
+        doctorName: profile.name || 'Unknown Doctor',
+        diagnosis: diagnosis.trim(),
+        prescription: prescription.trim(),
+        notes: (notes || '').trim(),
+        fileUrl: fileUrl || '',
         timestamp: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, 'medicalRecords'), newRecord);
+      const recordPath = 'medicalRecords';
+      const docRef = await addDoc(collection(db, recordPath), newRecord);
       setRecords(prev => [{ id: docRef.id, ...newRecord } as MedicalRecord, ...prev]);
       
       // Reset form
@@ -87,7 +95,11 @@ const MedicalRecords: React.FC = () => {
       setNotes('');
       setFile(null);
     } catch (err: any) {
-      alert(err.message);
+      if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) {
+        handleFirestoreError(err, OperationType.WRITE, 'medicalRecords');
+      } else {
+        alert(err.message || "An error occurred while saving the record.");
+      }
     } finally {
       setSubmitting(false);
     }
