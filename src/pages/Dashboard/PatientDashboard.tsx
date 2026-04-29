@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { cn, handleFirestoreError, OperationType } from '../../lib/utils';
+import { generateMedicalHistoryPDF } from '../../lib/pdfUtils';
 
 const PatientDashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -20,31 +21,7 @@ const PatientDashboard: React.FC = () => {
       alert("No medical records available to download.");
       return;
     }
-
-    let content = `HEAL SYNC - COMPLETE MEDICAL HISTORY\n`;
-    content += `Patient: ${profile?.name}\n`;
-    content += `Date Generated: ${format(new Date(), 'PPPP')}\n`;
-    content += `-------------------------------------------\n\n`;
-
-    recentRecords.forEach((record, index) => {
-      content += `RECORD #${index + 1}\n`;
-      content += `Diagnosis: ${record.diagnosis}\n`;
-      content += `Date: ${format(new Date(record.timestamp), 'PPP')}\n`;
-      content += `Doctor: Dr. ${record.doctorName}\n`;
-      content += `Prescription: ${record.prescription}\n`;
-      if (record.notes) content += `Notes: ${record.notes}\n`;
-      content += `-------------------------------------------\n\n`;
-    });
-
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `medical_history_${user?.uid}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    generateMedicalHistoryPDF(profile?.name || 'Patient', recentRecords);
   };
 
   useEffect(() => {
