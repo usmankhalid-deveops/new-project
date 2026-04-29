@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { Appointment, AppointmentStatus } from '../../types';
 import { Calendar, Clock, User, CheckCircle2, XCircle, Search, Filter, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
+
+import { handleFirestoreError, OperationType } from '../../lib/utils';
 
 const Appointments: React.FC = () => {
   const { user, profile } = useAuth();
@@ -18,15 +20,19 @@ const Appointments: React.FC = () => {
       if (!user || !profile) return;
       try {
         const field = profile.role === 'patient' ? 'patientId' : 'doctorId';
+        const apptPath = 'appointments';
         const q = query(
-          collection(db, 'appointments'),
+          collection(db, apptPath),
           where(field, '==', user.uid),
-          orderBy('createdAt', 'desc')
+          limit(100)
         );
         const snap = await getDocs(q);
-        setAppointments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
+        const apptList = snap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Appointment))
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setAppointments(apptList);
       } catch (err) {
-        console.error("Error fetching appointments:", err);
+        handleFirestoreError(err, OperationType.GET, 'appointments');
       } finally {
         setLoading(false);
       }
@@ -35,11 +41,14 @@ const Appointments: React.FC = () => {
   }, [user, profile]);
 
   const updateStatus = async (apptId: string, newStatus: AppointmentStatus) => {
+    const apptPath = 'appointments';
     try {
-      await updateDoc(doc(db, 'appointments', apptId), { status: newStatus });
+      await updateDoc(doc(db, apptPath, apptId), { 
+        status: newStatus 
+      });
       setAppointments(prev => prev.map(a => a.id === apptId ? { ...a, status: newStatus } : a));
     } catch (err) {
-      console.error("Error updating appointment status:", err);
+      handleFirestoreError(err, OperationType.WRITE, apptPath);
     }
   };
 

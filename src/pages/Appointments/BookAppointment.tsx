@@ -7,6 +7,8 @@ import { DoctorProfile } from '../../types';
 import { Calendar, Clock, AlertCircle, Loader2, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { handleFirestoreError, OperationType } from '../../lib/utils';
+
 const BookAppointment: React.FC = () => {
   const { doctorId } = useParams<{ doctorId: string }>();
   const { user, profile } = useAuth();
@@ -47,13 +49,14 @@ const BookAppointment: React.FC = () => {
     setSubmitting(true);
     setError('');
     
+    const apptPath = 'appointments';
     try {
-      await addDoc(collection(db, 'appointments'), {
+      await addDoc(collection(db, apptPath), {
         patientId: user.uid,
-        patientName: profile.name,
+        patientName: profile.name || 'Anonymous Patient',
         doctorId: doctor.userId,
-        doctorName: doctor.name,
-        specialization: doctor.specialization,
+        doctorName: doctor.name || 'Unknown Doctor',
+        specialization: doctor.specialization || 'General',
         date,
         time,
         status: 'pending',
@@ -62,6 +65,9 @@ const BookAppointment: React.FC = () => {
       setSuccess(true);
       setTimeout(() => navigate('/appointments'), 2000);
     } catch (err: any) {
+      if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) {
+        handleFirestoreError(err, OperationType.WRITE, apptPath);
+      }
       setError(err.message || 'Failed to book appointment');
     } finally {
       setSubmitting(false);

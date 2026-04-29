@@ -3,7 +3,7 @@ import { collection, query, where, getDocs, limit, orderBy } from 'firebase/fire
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { Appointment, MedicalRecord } from '../../types';
-import { Calendar, FileText, ArrowRight, Clock, CheckCircle2, AlertCircle, ChevronRight } from 'lucide-react';
+import { Calendar, FileText, ArrowRight, Clock, CheckCircle2, AlertCircle, ChevronRight, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
@@ -14,6 +14,38 @@ const PatientDashboard: React.FC = () => {
   const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
   const [recentRecords, setRecentRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const downloadAllRecords = () => {
+    if (recentRecords.length === 0) {
+      alert("No medical records available to download.");
+      return;
+    }
+
+    let content = `HEAL SYNC - COMPLETE MEDICAL HISTORY\n`;
+    content += `Patient: ${profile?.name}\n`;
+    content += `Date Generated: ${format(new Date(), 'PPPP')}\n`;
+    content += `-------------------------------------------\n\n`;
+
+    recentRecords.forEach((record, index) => {
+      content += `RECORD #${index + 1}\n`;
+      content += `Diagnosis: ${record.diagnosis}\n`;
+      content += `Date: ${format(new Date(record.timestamp), 'PPP')}\n`;
+      content += `Doctor: Dr. ${record.doctorName}\n`;
+      content += `Prescription: ${record.prescription}\n`;
+      if (record.notes) content += `Notes: ${record.notes}\n`;
+      content += `-------------------------------------------\n\n`;
+    });
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `medical_history_${user?.uid}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -189,6 +221,16 @@ const PatientDashboard: React.FC = () => {
                   <span className="font-semibold">Upload Report</span>
                   <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
+                <button 
+                  onClick={downloadAllRecords}
+                  className="w-full py-3 bg-white text-blue-600 hover:bg-blue-50 rounded-xl px-4 flex items-center justify-between group transition-all font-bold"
+                >
+                  <span className="flex items-center gap-2">
+                    <Download size={18} />
+                    Download History
+                  </span>
+                  <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </button>
               </div>
             </div>
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl" />

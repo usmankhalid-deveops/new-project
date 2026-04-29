@@ -15,7 +15,7 @@ const DoctorList: React.FC = () => {
     const fetchDoctors = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'doctors'));
-        const docList = querySnapshot.docs.map(doc => ({ ...doc.data() } as DoctorProfile));
+        const docList = querySnapshot.docs.map(doc => ({ userId: doc.id, ...doc.data() } as DoctorProfile));
         setDoctors(docList);
       } catch (err) {
         console.error("Error fetching doctors:", err);
