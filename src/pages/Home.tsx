@@ -38,7 +38,7 @@ const staggerContainer = {
 
 const Home: React.FC = () => {
   return (
-    <div className="min-h-screen bg-white selection:bg-blue-100 selection:text-blue-900 font-sans">
+    <div className="min-h-screen bg-white selection:bg-blue-100 selection:text-blue-900 font-sans overflow-x-hidden">
       {/* Navigation */}
       <nav className="border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -85,7 +85,7 @@ const Home: React.FC = () => {
               <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-600/10 border border-blue-200/50 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-8">
                 <Activity size={14} className="animate-pulse" /> Precision Healthcare System
               </div>
-              <h1 className="text-7xl lg:text-9xl font-black text-slate-900 leading-[0.85] tracking-tighter mb-10 font-display">
+              <h1 className="text-5xl sm:text-7xl lg:text-9xl font-black text-slate-900 leading-[0.9] tracking-tighter mb-10 font-display">
                 Your health, <br/>
                 <span className="text-blue-600 bg-clip-text text-transparent bg-linear-to-r from-blue-600 via-blue-500 to-indigo-400">perfectly sync'd.</span>
               </h1>
@@ -101,20 +101,24 @@ const Home: React.FC = () => {
                 </Link>
               </div>
               
-              <div className="mt-16 flex items-center gap-8 border-t border-slate-100 pt-10">
+              <div className="mt-10 lg:mt-16 flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8 border-t border-slate-100 pt-10">
                 <div className="flex -space-x-3">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="w-12 h-12 rounded-full border-4 border-white bg-slate-200 overflow-hidden">
-                      <img src={`https://i.pravatar.cc/100?u=user${i}`} alt="User" />
+                  {[
+                    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100&h=100",
+                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100&h=100",
+                    "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&q=80&w=100&h=100"
+                  ].map((url, i) => (
+                    <div key={i} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white bg-slate-200 overflow-hidden shrink-0">
+                      <img src={url} alt="User thumbnail" referrerPolicy="no-referrer" loading="eager" className="w-full h-full object-cover" />
                     </div>
                   ))}
-                  <div className="w-12 h-12 rounded-full border-4 border-white bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white tracking-tighter">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white bg-blue-600 flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-white tracking-tighter shrink-0">
                     +12k
                   </div>
                 </div>
-                <div className="w-px h-8 bg-slate-100" />
+                <div className="hidden sm:block w-px h-8 bg-slate-100" />
                 <div>
-                  <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Joined our Care</div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Joined our Care</div>
                   <div className="text-sm font-bold text-slate-900">Highly rated by healthcare professionals</div>
                 </div>
               </div>
@@ -122,17 +126,18 @@ const Home: React.FC = () => {
 
             <div className="lg:w-2/5 mt-20 lg:mt-0 relative group">
               <motion.div 
-                initial={{ opacity: 0, x: 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, ease: "circOut" }}
-                className="relative z-10 rounded-[4rem] overflow-hidden shadow-[0_40px_100px_-15px_rgba(37,99,235,0.2)] ring-1 ring-slate-100 h-[600px]"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="relative z-10 rounded-[4rem] overflow-hidden shadow-[0_40px_100px_-15px_rgba(37,99,235,0.2)] ring-1 ring-slate-100 h-[500px] lg:h-[600px] bg-slate-100"
               >
                 <img 
-                  src="https://images.unsplash.com/photo-1576091160550-217359f42f8c?auto=format&fit=crop&q=80&w=1200" 
-                  alt="Modern Doctor Consultation" 
+                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=1000" 
+                  alt="Modern Healthcare Professional" 
                   className="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-1000"
                   referrerPolicy="no-referrer"
+                  loading="eager"
+                  fetchPriority="high"
                 />
                 
                 <div className="absolute inset-0 bg-linear-to-t from-slate-900/60 via-transparent to-transparent" />
@@ -142,14 +147,15 @@ const Home: React.FC = () => {
                   initial={{ y: 20, opacity: 0 }}
                   whileInView={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.8 }}
-                  className="absolute bottom-8 left-8 right-8 bg-white/95 backdrop-blur-xl p-6 rounded-3xl border border-white/50 shadow-2xl flex items-center gap-4"
+                  className="absolute bottom-4 left-4 right-4 sm:bottom-8 sm:left-8 sm:right-8 bg-white/95 backdrop-blur-xl p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/50 shadow-2xl flex items-center gap-3 sm:gap-4"
                 >
-                  <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0 text-white shadow-lg shadow-blue-200">
-                    <Calendar size={28} />
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 bg-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 text-white shadow-lg shadow-blue-200">
+                    <Calendar size={20} className="sm:hidden" />
+                    <Calendar size={28} className="hidden sm:block" />
                   </div>
                   <div>
-                    <div className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Next Appointment</div>
-                    <div className="text-base font-bold text-slate-800">Cardiology Focus · 4 Oct, 2:00 PM</div>
+                    <div className="text-[8px] sm:text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Next Appointment</div>
+                    <div className="text-xs sm:text-base font-bold text-slate-800">Cardiology Focus · 4 Oct, 2:00 PM</div>
                   </div>
                 </motion.div>
                 
@@ -157,15 +163,15 @@ const Home: React.FC = () => {
                   initial={{ scale: 0, opacity: 0 }}
                   whileInView={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 1, type: "spring" }}
-                  className="absolute top-8 left-8 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl flex items-center gap-2 border border-white shadow-lg"
+                  className="absolute top-4 left-4 sm:top-8 sm:left-8 bg-white/90 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl flex items-center gap-2 border border-white shadow-lg"
                 >
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">350+ Doctors Online</span>
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-[8px] sm:text-[10px] font-black text-slate-900 uppercase tracking-widest">350+ Doctors Online</span>
                 </motion.div>
               </motion.div>
               
               {/* Decorative blobs */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] bg-blue-500/10 rounded-full blur-[100px] -z-10" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-500/10 rounded-full blur-[100px] -z-10" />
             </div>
           </div>
         </div>
@@ -293,16 +299,37 @@ const Home: React.FC = () => {
                    <button className="px-8 py-4 bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-800 transition-colors border border-blue-500/50">Help Center</button>
                 </div>
              </div>
-             <div className="lg:w-1/2 h-[500px] lg:h-full relative overflow-hidden">
+             <div className="lg:w-1/2 min-h-[400px] lg:min-h-[500px] relative overflow-hidden self-stretch bg-blue-700">
                 <img 
-                  src="https://images.unsplash.com/photo-1590650516494-23253a085517?auto=format&fit=crop&q=80&w=1000" 
+                  src="https://images.unsplash.com/photo-1584432830635-f129c922896c?auto=format&fit=crop&q=80&w=1200" 
                   alt="Instant Support Team" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover absolute inset-0"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-linear-to-r from-blue-600 via-transparent to-transparent hidden lg:block" />
              </div>
           </div>
+        </div>
+      </section>
+
+      {/* Partner Logos Section */}
+      <section className="py-12 border-y border-slate-100 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4">
+           <div className="flex flex-wrap justify-center lg:justify-between items-center gap-8 lg:gap-12 opacity-40 grayscale group hover:grayscale-0 transition-all duration-500">
+              {[
+                { name: "MediCare", icon: <Shield size={24} /> },
+                { name: "HealthPlus", icon: <HeartPulse size={24} /> },
+                { name: "SafeSync", icon: <Shield size={24} /> },
+                { name: "LifeGuard", icon: <Activity size={24} /> },
+                { name: "BioGen", icon: <Stethoscope size={24} /> },
+                { name: "AstraCare", icon: <Plus size={24} /> }
+              ].map((brand, i) => (
+                <div key={i} className="flex items-center gap-2 cursor-default grayscale group-hover:grayscale-0 transition-all">
+                  <div className="text-slate-900">{brand.icon}</div>
+                  <span className="text-xl font-black text-slate-900 tracking-tighter uppercase">{brand.name}</span>
+                </div>
+              ))}
+           </div>
         </div>
       </section>
 
@@ -469,8 +496,13 @@ const Home: React.FC = () => {
                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                       <div className="text-xs font-black text-blue-600 uppercase mb-2 tracking-widest">Featured Doctor</div>
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden">
-                           <img src="https://i.pravatar.cc/100?u=doc" alt="Doctor" />
+                        <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                           <img 
+                             src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=100&h=100" 
+                             alt="Doctor" 
+                             className="w-full h-full object-cover"
+                             referrerPolicy="no-referrer" 
+                           />
                         </div>
                         <div>
                            <div className="font-black text-slate-900">Dr. Sarah Johnson</div>
