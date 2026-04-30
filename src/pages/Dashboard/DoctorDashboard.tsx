@@ -3,7 +3,7 @@ import { collection, query, where, getDocs, limit, orderBy, updateDoc, doc } fro
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { Appointment, AppointmentStatus } from '../../types';
-import { Users, Calendar, CheckCircle2, XCircle, Clock, ArrowRight } from 'lucide-react';
+import { Users, Calendar, CheckCircle2, XCircle, Clock, ArrowRight, Copy, Mail, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
@@ -15,6 +15,13 @@ const DoctorDashboard: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,7 +76,7 @@ const DoctorDashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Welcome, Dr. {profile?.name}</h1>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-display">Welcome, Dr. {profile?.name}</h1>
         <p className="text-slate-500 mt-1">Review your patient schedule and health records.</p>
       </header>
 
@@ -81,7 +88,7 @@ const DoctorDashboard: React.FC = () => {
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Total Appointments</p>
-            <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+            <p className="text-2xl font-bold text-slate-900 font-display">{stats.total}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4">
@@ -90,7 +97,7 @@ const DoctorDashboard: React.FC = () => {
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Pending Requests</p>
-            <p className="text-2xl font-bold text-slate-900">{stats.pending}</p>
+            <p className="text-2xl font-bold text-slate-900 font-display">{stats.pending}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4">
@@ -99,7 +106,7 @@ const DoctorDashboard: React.FC = () => {
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Completed Sessions</p>
-            <p className="text-2xl font-bold text-slate-900">{stats.completed}</p>
+            <p className="text-2xl font-bold text-slate-900 font-display">{stats.completed}</p>
           </div>
         </div>
       </div>
@@ -108,7 +115,7 @@ const DoctorDashboard: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <section>
             <div className="flex items-center justify-between mb-4 px-2">
-              <h2 className="text-xl font-bold text-slate-900">Recent Appointments</h2>
+              <h2 className="text-xl font-bold text-slate-900 font-display">Recent Appointments</h2>
               <Link to="/appointments" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1">
                 View Schedule <ArrowRight size={14} />
               </Link>
@@ -131,10 +138,30 @@ const DoctorDashboard: React.FC = () => {
                         <tr key={appt.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-sm">
+                              <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-sm shrink-0">
                                 {appt.patientName.charAt(0)}
                               </div>
-                              <span className="font-semibold text-slate-900">{appt.patientName}</span>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-slate-900 truncate">{appt.patientName}</div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <div className="text-xs text-slate-400 truncate flex items-center gap-1 max-w-[150px]">
+                                    <Mail size={10} />
+                                    {appt.patientEmail || 'No email provided'}
+                                  </div>
+                                  {appt.patientEmail && (
+                                    <button 
+                                      onClick={() => copyToClipboard(appt.patientEmail, appt.id)}
+                                      className={cn(
+                                        "p-1 rounded bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600 transition-all",
+                                        copiedId === appt.id && "bg-green-100 text-green-600"
+                                      )}
+                                      title="Copy Email"
+                                    >
+                                      {copiedId === appt.id ? <CheckCircle2 size={10} /> : <Copy size={10} />}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -153,32 +180,41 @@ const DoctorDashboard: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            {appt.status === 'pending' && (
-                              <div className="flex items-center justify-end gap-2">
-                                <button 
-                                  onClick={() => updateStatus(appt.id, 'confirmed')}
-                                  className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                                  title="Accept"
-                                >
-                                  <CheckCircle2 size={18} />
-                                </button>
-                                <button 
-                                  onClick={() => updateStatus(appt.id, 'cancelled')}
-                                  className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                                  title="Reject"
-                                >
-                                  <XCircle size={18} />
-                                </button>
-                              </div>
-                            )}
-                            {appt.status === 'confirmed' && (
-                              <button 
-                                onClick={() => updateStatus(appt.id, 'completed')}
-                                className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                            <div className="flex items-center justify-end gap-3">
+                              <Link 
+                                to={`/records?patientId=${appt.patientId}&patientName=${encodeURIComponent(appt.patientName)}`}
+                                className="p-1.5 bg-slate-50 text-slate-500 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                title="View Patient History"
                               >
-                                Complete
-                              </button>
-                            )}
+                                <FileText size={18} />
+                              </Link>
+                              {appt.status === 'pending' && (
+                                <>
+                                  <button 
+                                    onClick={() => updateStatus(appt.id, 'confirmed')}
+                                    className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                                    title="Accept"
+                                  >
+                                    <CheckCircle2 size={18} />
+                                  </button>
+                                  <button 
+                                    onClick={() => updateStatus(appt.id, 'cancelled')}
+                                    className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                    title="Reject"
+                                  >
+                                    <XCircle size={18} />
+                                  </button>
+                                </>
+                              )}
+                              {appt.status === 'confirmed' && (
+                                <button 
+                                  onClick={() => updateStatus(appt.id, 'completed')}
+                                  className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                  Complete
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))

@@ -1,154 +1,247 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import { format } from 'date-fns';
+import autoTable from 'jspdf-autotable';
+import { format, isValid } from 'date-fns';
 import { MedicalRecord } from '../types';
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
+const safeFormat = (date: any, formatStr: string) => {
+  try {
+    const d = new Date(date);
+    return isValid(d) ? format(d, formatStr) : 'N/A';
+  } catch (e) {
+    return 'N/A';
   }
-}
+};
 
 export const generateMedicalHistoryPDF = (patientName: string, records: MedicalRecord[]) => {
-  const doc = new jsPDF();
-  const dateStr = format(new Date(), 'PPPP');
+  try {
+    const doc = new jsPDF();
+    const dateStr = safeFormat(new Date(), 'PPPP');
 
-  // Header
-  doc.setFillColor(37, 99, 235); // Blue-600
-  doc.rect(0, 0, 210, 40, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('HEAL SYNC', 105, 20, { align: 'center' });
-  
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Professional Healthcare Management System', 105, 28, { align: 'center' });
+    // Add professional aesthetic border
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(0.5);
+    doc.rect(5, 5, 200, 287);
 
-  // Patient Info Section
-  doc.setTextColor(30, 41, 59); // Slate-800
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Medical History Report', 20, 55);
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Patient Name: ${patientName}`, 20, 65);
-  doc.text(`Report Date: ${dateStr}`, 20, 71);
-  doc.text(`Total Records: ${records.length}`, 20, 77);
+    // Decorative Color Bar
+    doc.setFillColor(37, 99, 235); // Blue-600
+    doc.rect(10, 10, 190, 4, 'F');
 
-  // Table
-  const tableRows = records.map((record, index) => [
-    index + 1,
-    format(new Date(record.timestamp), 'MMM dd, yyyy'),
-    record.diagnosis,
-    `Dr. ${record.doctorName}`,
-    record.prescription
-  ]);
+    // Header
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.text('HEAL SYNC', 20, 30);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text('PRECISION HEALTHCARE SYSTEM', 20, 38);
 
-  doc.autoTable({
-    startY: 85,
-    head: [['#', 'Date', 'Diagnosis', 'Doctor', 'Prescription']],
-    body: tableRows,
-    theme: 'striped',
-    headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [241, 245, 249] },
-    margin: { top: 85 },
-    styles: { overflow: 'linebreak', cellPadding: 5 }
-  });
+    // Divider
+    doc.setDrawColor(241, 245, 249); // slate-100
+    doc.line(20, 45, 190, 45);
 
-  // Footer
-  const pageCount = (doc as any).internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
+    // Patient Info Ribbon
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.rect(20, 55, 170, 35, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(20, 55, 170, 35, 'S');
+
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Medical History Summary', 30, 70);
+    
     doc.setFontSize(10);
-    doc.setTextColor(150);
-    doc.text(
-      'This is a computer-generated report. No signature required.',
-      105,
-      doc.internal.pageSize.height - 15,
-      { align: 'center' }
-    );
-    doc.text(
-      `Page ${i} of ${pageCount}`,
-      doc.internal.pageSize.width - 20,
-      doc.internal.pageSize.height - 10,
-      { align: 'right' }
-    );
-  }
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`PATIENT: ${patientName.toUpperCase()}`, 30, 80);
+    doc.text(`ISSUED: ${dateStr.toUpperCase()}`, 110, 80);
 
-  doc.save(`Medical_History_${patientName.replace(/\s+/g, '_')}.pdf`);
+    // Table Content
+    const tableRows = records.map((record, index) => [
+      index + 1,
+      safeFormat(record.timestamp, 'MMM dd, yyyy'),
+      record.diagnosis,
+      `Dr. ${record.doctorName}`,
+      record.prescription
+    ]);
+
+    autoTable(doc, {
+      startY: 100,
+      head: [['#', 'DATE', 'DIAGNOSIS', 'PHYSICIAN', 'PRESCRIPTION / NOTES']],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [30, 41, 59], 
+        textColor: [255, 255, 255], 
+        fontSize: 9, 
+        fontStyle: 'bold',
+        cellPadding: 5
+      },
+      bodyStyles: { 
+        fontSize: 9, 
+        cellPadding: 6,
+        textColor: [51, 65, 85]
+      },
+      alternateRowStyles: { 
+        fillColor: [250, 251, 253] 
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 30 },
+        2: { fontStyle: 'bold', cellWidth: 40 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 'auto' }
+      },
+      margin: { left: 20, right: 20 }
+    });
+
+    // Signatures / Footer placeholders
+    const finalY = (doc as any).lastAutoTable.finalY + 30;
+    if (finalY < 250) {
+      doc.setDrawColor(200);
+      doc.line(20, finalY, 80, finalY);
+      doc.line(130, finalY, 190, finalY);
+      doc.setFontSize(8);
+      doc.text('Patient Signature', 50, finalY + 5, { align: 'center' });
+      doc.text('Authorized Physician', 160, finalY + 5, { align: 'center' });
+    }
+
+    // Page Numbers & Confidentiality
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        'CONFIDENTIAL: This document contains sensitive medical information protected by law.',
+        105,
+        285,
+        { align: 'center' }
+      );
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.width - 25,
+        285,
+        { align: 'right' }
+      );
+    }
+
+    doc.save(`HEALSYNC_History_${patientName.replace(/\s+/g, '_')}.pdf`);
+  } catch (error) {
+    console.error('PDF Generation Failed:', error);
+    alert('Sorry, there was an issue generating your PDF. Please try again later.');
+  }
 };
 
 export const generateSingleRecordPDF = (record: MedicalRecord) => {
-  const doc = new jsPDF();
+  try {
+    const doc = new jsPDF();
+    const timestamp = safeFormat(record.timestamp, 'PPPP');
 
-  // Header
-  doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, 210, 40, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('HEAL SYNC', 105, 20, { align: 'center' });
-  
-  doc.setFontSize(12);
-  doc.text('Professional Healthcare Management System', 105, 28, { align: 'center' });
+    // Aesthetic Accents
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(2);
+    doc.line(0, 0, 0, 297); // Left accent line
 
-  // Record details
-  doc.setTextColor(30, 41, 59);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Medical Record Summary', 20, 55);
-
-  doc.autoTable({
-    startY: 65,
-    body: [
-      ['Report ID', record.id],
-      ['Date', format(new Date(record.timestamp), 'PPPP')],
-      ['Patient Name', record.patientName],
-      ['Attending Physician', `Dr. ${record.doctorName}`],
-      ['Primary Diagnosis', record.diagnosis],
-    ],
-    theme: 'plain',
-    styles: { fontSize: 11, cellPadding: 4 },
-    columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
-  });
-
-  // Prescription section
-  const finalY = (doc as any).lastAutoTable.finalY + 15;
-  
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('℞ Prescription', 20, finalY);
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  const prescriptionLines = doc.splitTextToSize(record.prescription, 170);
-  doc.text(prescriptionLines, 20, finalY + 10);
-
-  // Notes section
-  if (record.notes) {
-    const notesY = finalY + 15 + (prescriptionLines.length * 6);
-    doc.setFontSize(14);
+    // Header Branding
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('Clinical Notes', 20, notesY);
+    doc.text('HEAL SYNC', 20, 30);
     
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('CLINICAL DOCUMENTATION SYSTEM', 20, 37);
+
+    // Metadata Right-aligned
+    doc.setFontSize(9);
+    doc.text(`RECORD ID: ${record.id.toUpperCase()}`, 190, 30, { align: 'right' });
+    doc.text(`DATE: ${safeFormat(record.timestamp, 'dd MMM yyyy').toUpperCase()}`, 190, 37, { align: 'right' });
+
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(20, 45, 190, 45);
+
+    // Subject Hero Section
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(28);
+    doc.text('Medical Record', 20, 65);
+    doc.setFontSize(12);
+    doc.setTextColor(37, 99, 235);
+    doc.text(`Patient: ${record.patientName}`, 20, 75);
+
+    // Structured Details
+    autoTable(doc, {
+      startY: 85,
+      body: [
+        ['Status', 'OFFICIAL RECORD'],
+        ['Attending Doctor', `Dr. ${record.doctorName}`],
+        ['Clinical Date', timestamp],
+        ['Service Type', 'Consultation & Prescription'],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 4, textColor: [71, 85, 105] },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40, textColor: [30, 41, 59] } },
+      margin: { left: 20 }
+    });
+
+    const bodyY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Diagnosis Section
+    doc.setFillColor(248, 250, 252);
+    doc.rect(20, bodyY, 170, 30, 'F');
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Primary Diagnosis', 30, bodyY + 10);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    const notesLines = doc.splitTextToSize(record.notes, 170);
-    doc.text(notesLines, 20, notesY + 10);
+    doc.text(record.diagnosis, 30, bodyY + 20);
+
+    // Prescription Section
+    const rxY = bodyY + 45;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('℞ Medical Prescription', 20, rxY);
+    
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.8);
+    doc.line(20, rxY + 3, 40, rxY + 3);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    const rxLines = doc.splitTextToSize(record.prescription, 160);
+    doc.text(rxLines, 20, rxY + 12);
+
+    // Notes Section
+    if (record.notes) {
+      const notesY = rxY + 25 + (rxLines.length * 6);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 41, 59);
+      doc.text('Clinical Observations', 20, notesY);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      const notesLines = doc.splitTextToSize(record.notes, 160);
+      doc.text(notesLines, 20, notesY + 10);
+    }
+
+    // Footer
+    const footerY = 280;
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text('HEALSYNC ELECTRONIC HEALTH RECORD', 105, footerY, { align: 'center' });
+    doc.text('This document is verified and encrypted for security.', 105, footerY + 5, { align: 'center' });
+
+    doc.save(`HEALSYNC_${record.patientName.replace(/\s+/g, '_')}_Record.pdf`);
+  } catch (error) {
+    console.error('PDF Generation Failed:', error);
+    alert('Sorry, there was an issue generating your PDF. Please try again later.');
   }
-
-  // Border/Footer
-  doc.setDrawColor(37, 99, 235);
-  doc.setLineWidth(0.5);
-  doc.line(20, doc.internal.pageSize.height - 30, 190, doc.internal.pageSize.height - 30);
-  
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Confidential Document - For Medical Use Only', 105, doc.internal.pageSize.height - 20, { align: 'center' });
-
-  doc.save(`Medical_Record_${record.diagnosis.replace(/\s+/g, '_')}.pdf`);
 };
+

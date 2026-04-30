@@ -87,7 +87,7 @@ const PatientDashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Hello, {profile?.name}!</h1>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-display">Hello, {profile?.name}!</h1>
         <p className="text-slate-500 mt-1">Here's what's happening with your health profile.</p>
       </header>
 
@@ -96,7 +96,7 @@ const PatientDashboard: React.FC = () => {
           {/* Recent Appointments */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 font-display">
                 <Calendar className="text-blue-600 w-6 h-6" />
                 Recent Appointments
               </h2>
@@ -147,7 +147,7 @@ const PatientDashboard: React.FC = () => {
           {/* Recent Records */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 font-display">
                 <FileText className="text-blue-600 w-6 h-6" />
                 Medical Records
               </h2>

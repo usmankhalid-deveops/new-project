@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
-import { MedicalRecord, Appointment } from '../../types';
-import { FileText, Plus, Search, Calendar, User, Download, X, Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { MedicalRecord } from '../../types';
+import { FileText, Plus, Search, Calendar, User, Download, X, Upload, Loader2, Filter, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/utils';
 import { generateMedicalHistoryPDF, generateSingleRecordPDF } from '../../lib/pdfUtils';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const MedicalRecords: React.FC = () => {
   const { user, profile } = useAuth();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const patientIdParam = searchParams.get('patientId');
+  const patientNameParam = searchParams.get('patientName');
+
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -29,14 +35,30 @@ const MedicalRecords: React.FC = () => {
     const fetchRecords = async () => {
       if (!user || !profile) return;
       try {
-        const field = profile.role === 'patient' ? 'patientId' : 'doctorId';
         const recordPath = 'medicalRecords';
-        const q = query(
-          collection(db, recordPath),
-          where(field, '==', user.uid)
-        );
+        let q;
+
+        if (profile.role === 'doctor' && patientIdParam) {
+          // Doctor viewing a specific patient's records
+          q = query(
+            collection(db, recordPath),
+            where('patientId', '==', patientIdParam)
+          );
+        } else {
+          // Normal view: patients see their own, doctors see those they authored
+          const field = profile.role === 'patient' ? 'patientId' : 'doctorId';
+          q = query(
+            collection(db, recordPath),
+            where(field, '==', user.uid)
+          );
+        }
+
         const snap = await getDocs(q);
-        setRecords(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MedicalRecord)));
+        const fetchedRecords = snap.docs.map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as any) } as MedicalRecord));
+        
+        // Sort by date descending
+        fetchedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setRecords(fetchedRecords);
       } catch (err) {
         handleFirestoreError(err, OperationType.GET, 'medicalRecords');
       } finally {
@@ -44,7 +66,7 @@ const MedicalRecords: React.FC = () => {
       }
     };
     fetchRecords();
-  }, [user, profile]);
+  }, [user, profile, patientIdParam]);
 
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +134,8 @@ const MedicalRecords: React.FC = () => {
 
   const downloadAllRecords = () => {
     if (records.length === 0) return;
-    generateMedicalHistoryPDF(profile?.name || 'Patient', records);
+    const name = (profile?.role === 'doctor' && patientNameParam) ? patientNameParam : (profile?.name || 'Patient');
+    generateMedicalHistoryPDF(name, records);
   };
 
   const filteredRecords = records.filter(r => 
@@ -126,12 +149,25 @@ const MedicalRecords: React.FC = () => {
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Medical Records</h1>
-          <p className="text-slate-500 mt-1">
-            {profile?.role === 'patient' 
-              ? "Access your full medical history and prescriptions." 
-              : "Review and manage medical records for your patients."}
+        <div className="flex flex-col gap-1">
+          {patientIdParam && (
+            <button 
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-blue-600 mb-2 uppercase tracking-widest transition-colors w-fit"
+            >
+              <ArrowLeft size={14} /> Back to dashboard
+            </button>
+          )}
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            {patientNameParam ? `History: ${patientNameParam}` : 'Medical Records'}
+          </h1>
+          <p className="text-slate-500">
+            {patientNameParam 
+              ? `Reviewing complete medical archive for ${patientNameParam}.`
+              : (profile?.role === 'patient' 
+                ? "Access your full medical history and prescriptions." 
+                : "Review and manage medical records for your patients.")
+            }
           </p>
         </div>
 

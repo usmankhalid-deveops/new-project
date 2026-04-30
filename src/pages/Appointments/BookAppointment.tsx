@@ -54,6 +54,7 @@ const BookAppointment: React.FC = () => {
       await addDoc(collection(db, apptPath), {
         patientId: user.uid,
         patientName: profile.name || 'Anonymous Patient',
+        patientEmail: user.email || profile.email || '',
         doctorId: doctor.userId,
         doctorName: doctor.name || 'Unknown Doctor',
         specialization: doctor.specialization || 'General',

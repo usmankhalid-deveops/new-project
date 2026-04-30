@@ -3,7 +3,7 @@ import { collection, query, where, getDocs, updateDoc, doc, limit } from 'fireba
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { Appointment, AppointmentStatus } from '../../types';
-import { Calendar, Clock, User, CheckCircle2, XCircle, Search, Filter, AlertCircle, Loader2 } from 'lucide-react';
+import { Calendar, Clock, User, CheckCircle2, XCircle, Search, Filter, AlertCircle, Loader2, Copy, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 
@@ -14,6 +14,13 @@ const Appointments: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<AppointmentStatus | 'all'>('all');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -107,6 +114,26 @@ const Appointments: React.FC = () => {
                        {profile?.role === 'patient' ? `Dr. ${appt.doctorName}` : appt.patientName}
                     </h3>
                   </div>
+                  {profile?.role === 'doctor' && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="text-xs text-slate-400 truncate flex items-center gap-1 font-medium italic">
+                        <Mail size={12} />
+                        {appt.patientEmail || 'No email provided'}
+                      </div>
+                      {appt.patientEmail && (
+                        <button 
+                          onClick={() => copyToClipboard(appt.patientEmail, appt.id)}
+                          className={cn(
+                            "p-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-blue-100 hover:text-blue-600 transition-all",
+                            copiedId === appt.id && "bg-green-100 text-green-600"
+                          )}
+                          title="Copy Email"
+                        >
+                          {copiedId === appt.id ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center gap-y-1 gap-x-4">
                     <p className="text-sm text-slate-500 flex items-center gap-1.5 font-medium">
                       <Clock size={14} className="text-slate-400" /> {appt.time}

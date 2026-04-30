@@ -69,7 +69,7 @@ const Register: React.FC = () => {
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 mb-4">
             <Stethoscope className="text-white w-10 h-10" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight text-center">Join HealSync</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight text-center font-display">Join HealSync</h1>
           <p className="text-slate-500 mt-2 text-center">Secure healthcare management for everyone</p>
         </div>
 
