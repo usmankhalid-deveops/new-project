@@ -17,25 +17,55 @@ import { handleFirestoreError, OperationType } from '../lib/utils';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem('hs_cached_profile');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {}
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem('hs_cached_profile');
+      if (cached) return false;
+    } catch (e) {}
+    return true;
+  });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        const path = `users/${user.uid}`;
+    const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
+      setUser(authenticatedUser);
+      if (authenticatedUser) {
+        localStorage.setItem('hs_last_uid', authenticatedUser.uid);
+        const cacheKey = `hs_profile_${authenticatedUser.uid}`;
+        
+        // Optimistic cache update
         try {
-          const docRef = doc(db, 'users', user.uid);
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            setProfile(JSON.parse(cached));
+            setLoading(false);
+          }
+        } catch (e) {}
+
+        const path = `users/${authenticatedUser.uid}`;
+        try {
+          const docRef = doc(db, 'users', authenticatedUser.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
+            const freshProfile = docSnap.data() as UserProfile;
+            setProfile(freshProfile);
+            localStorage.setItem(cacheKey, JSON.stringify(freshProfile));
+            localStorage.setItem('hs_cached_profile', JSON.stringify(freshProfile));
           }
         } catch (error) {
           handleFirestoreError(error, OperationType.GET, path);
         }
       } else {
         setProfile(null);
+        localStorage.removeItem('hs_cached_profile');
       }
       setLoading(false);
     });

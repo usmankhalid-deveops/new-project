@@ -21,18 +21,23 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const navigation = profile?.role === 'patient' 
+  const navigation = profile?.role === 'admin'
     ? [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Find Doctor', href: '/doctors', icon: Stethoscope },
-        { name: 'Appointments', href: '/appointments', icon: Calendar },
-        { name: 'Medical Records', href: '/records', icon: FileText },
+        { name: 'Admin Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'System Records', href: '/records', icon: FileText },
       ]
-    : [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Appointments', href: '/appointments', icon: Calendar },
-        { name: 'Patient History', href: '/records', icon: UserRound },
-      ];
+    : profile?.role === 'patient' 
+      ? [
+          { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+          { name: 'Find Doctor', href: '/doctors', icon: Stethoscope },
+          { name: 'Appointments', href: '/appointments', icon: Calendar },
+          { name: 'Medical Records', href: '/records', icon: FileText },
+        ]
+      : [
+          { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+          { name: 'Appointments', href: '/appointments', icon: Calendar },
+          { name: 'Patient History', href: '/records', icon: UserRound },
+        ];
 
   const handleLogout = async () => {
     await logout();

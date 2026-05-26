@@ -2,13 +2,15 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "Base user profile for both patients and doctors",
+      "description": "Base user profile for patients, doctors, and admins",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "name": { "type": "string" },
         "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["patient", "doctor"] }
+        "role": { "type": "string", "enum": ["patient", "doctor", "admin"] },
+        "licenseNumber": { "type": "string" },
+        "verificationStatus": { "type": "string", "enum": ["pending", "verified", "rejected"] }
       },
       "required": ["uid", "name", "email", "role"]
     },

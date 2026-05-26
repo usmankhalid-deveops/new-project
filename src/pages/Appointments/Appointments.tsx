@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, updateDoc, doc, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, limit, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { Appointment, AppointmentStatus } from '../../types';
@@ -54,6 +54,79 @@ const Appointments: React.FC = () => {
         status: newStatus 
       });
       setAppointments(prev => prev.map(a => a.id === apptId ? { ...a, status: newStatus } : a));
+
+      // Trigger automated patient email notification upon appointment confirmation
+      if (newStatus === 'confirmed') {
+        const appt = appointments.find(a => a.id === apptId);
+        if (appt && appt.patientEmail) {
+          const emailSubject = `Appointment Confirmed: Dr. ${appt.doctorName}`;
+          const formattedDate = format(new Date(appt.date), 'EEEE, MMMM dd, yyyy');
+          const emailBody = `
+Dear ${appt.patientName},
+
+We are pleased to inform you that your appointment with Dr. ${appt.doctorName} has been successfully confirmed at our clinic!
+
+Confirmed Appointment Details:
+---------------------------------------------
+Practitioner: Dr. ${appt.doctorName}
+Specialty: ${appt.specialization || 'Clinical Specialist'}
+Date: ${formattedDate}
+Time: ${appt.time}
+
+Please log in to the Heal Sync website using the email address through which you booked the appointment (${appt.patientEmail}) to access your medical logs, manage your schedule, or consult virtually.
+
+If you need to reschedule or cancel, please make changes via the Heal Sync User Portal at least 24 hours prior to your slot.
+
+Warm regards,
+Heal Sync System Administration Team
+          `.trim();
+
+          await addDoc(collection(db, 'patient_emails'), {
+            patientId: appt.patientId,
+            patientEmail: appt.patientEmail,
+            subject: emailSubject,
+            body: emailBody,
+            doctorName: appt.doctorName,
+            date: appt.date,
+            time: appt.time,
+            apptId: appt.id,
+            timestamp: new Date().toISOString()
+          });
+
+          // Fetch patient profile to check if there is an associated phone for SMS email alert
+          try {
+            const userSnap = await getDoc(doc(db, 'users', appt.patientId));
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              if (userData && userData.phone) {
+                const phoneVal = userData.phone;
+                // Standardize formatted phone email gateway (e.g. 5550212000@txt.att.net)
+                const digits = phoneVal.replace(/\D/g, '');
+                const smsGatewayEmail = digits ? `${digits}@txt.att.net` : `${phoneVal.replace(/\s+/g, '')}@sms.healsync.local`;
+
+                const smsSubject = `HealSync: Appt Confirmed!`;
+                const smsBody = `Dr. ${appt.doctorName} confirmed your appointment on ${formattedDate} at ${appt.time}. HealSync alerts.`;
+
+                await addDoc(collection(db, 'patient_emails'), {
+                  patientId: appt.patientId,
+                  patientEmail: smsGatewayEmail,
+                  subject: smsSubject,
+                  body: smsBody,
+                  doctorName: appt.doctorName,
+                  date: appt.date,
+                  time: appt.time,
+                  apptId: appt.id,
+                  isPhoneAlert: true,
+                  phoneAlertNumber: phoneVal,
+                  timestamp: new Date().toISOString()
+                });
+              }
+            }
+          } catch (phoneErr) {
+            console.warn("Could not retrieve patient profile phone number for SMS Alert email:", phoneErr);
+          }
+        }
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, apptPath);
     }

@@ -8,6 +8,7 @@ import Register from './pages/Auth/Register';
 import Home from './pages/Home';
 import PatientDashboard from './pages/Dashboard/PatientDashboard';
 import DoctorDashboard from './pages/Dashboard/DoctorDashboard';
+import AdminDashboard from './pages/Dashboard/AdminDashboard';
 import DoctorList from './pages/Doctors/DoctorList';
 import Appointments from './pages/Appointments/Appointments';
 import MedicalRecords from './pages/Records/MedicalRecords';
@@ -16,6 +17,7 @@ import { useAuth } from './context/AuthContext';
 
 const DashboardRedirect = () => {
   const { profile } = useAuth();
+  if (profile?.role === 'admin') return <AdminDashboard />;
   if (profile?.role === 'doctor') return <DoctorDashboard />;
   return <PatientDashboard />;
 };

@@ -1,4 +1,4 @@
-export type Role = 'patient' | 'doctor';
+export type Role = 'patient' | 'doctor' | 'admin';
 
 export interface UserProfile {
   uid: string;
@@ -6,6 +6,9 @@ export interface UserProfile {
   email: string;
   role: Role;
   createdAt?: any;
+  licenseNumber?: string;
+  verificationStatus?: 'pending' | 'verified' | 'rejected';
+  phone?: string;
 }
 
 export interface DoctorProfile {

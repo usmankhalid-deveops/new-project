@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { MedicalRecord } from '../../types';
-import { FileText, Plus, Search, Calendar, User, Download, X, Upload, Loader2, Filter, ArrowLeft } from 'lucide-react';
+import { FileText, Plus, Search, Calendar, User, Download, X, Upload, Loader2, Filter, ArrowLeft, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/utils';
@@ -22,6 +22,7 @@ const MedicalRecords: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Form state for doctor
   const [patientEmail, setPatientEmail] = useState('');
@@ -38,7 +39,10 @@ const MedicalRecords: React.FC = () => {
         const recordPath = 'medicalRecords';
         let q;
 
-        if (profile.role === 'doctor' && patientIdParam) {
+        if (profile.role === 'admin') {
+          // Admin can view all medical records globally for system auditing
+          q = query(collection(db, recordPath));
+        } else if (profile.role === 'doctor' && patientIdParam) {
           // Doctor viewing a specific patient's records
           q = query(
             collection(db, recordPath),
@@ -136,6 +140,17 @@ const MedicalRecords: React.FC = () => {
     if (records.length === 0) return;
     const name = (profile?.role === 'doctor' && patientNameParam) ? patientNameParam : (profile?.name || 'Patient');
     generateMedicalHistoryPDF(name, records);
+  };
+
+  const handleDeleteRecord = async (recordId: string) => {
+    try {
+      const docRef = doc(db, 'medicalRecords', recordId);
+      await deleteDoc(docRef);
+      setRecords(prev => prev.filter(r => r.id !== recordId));
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.DELETE, `medicalRecords/${recordId}`);
+    }
   };
 
   const filteredRecords = records.filter(r => 
@@ -309,9 +324,39 @@ const MedicalRecords: React.FC = () => {
                 <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                   <FileText size={24} />
                 </div>
-                <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                  <Calendar size={12} /> {format(new Date(record.timestamp), 'MMM dd, yyyy')}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                    <Calendar size={12} /> {format(new Date(record.timestamp), 'MMM dd, yyyy')}
+                  </p>
+                  {(profile?.role === 'doctor' || profile?.role === 'admin') && (
+                    confirmDeleteId === record.id ? (
+                      <div className="flex items-center gap-1 bg-rose-50 border border-rose-100 p-1 rounded-xl">
+                        <span className="text-[10px] font-bold text-rose-700 px-1">Sure?</span>
+                        <button
+                          onClick={() => record.id && handleDeleteRecord(record.id)}
+                          className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[10px] transition-all"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="px-1.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg font-bold text-[10px] transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => record.id && setConfirmDeleteId(record.id)}
+                        className="p-1.5 bg-rose-50 border border-rose-100 hover:border-rose-200 text-rose-600 rounded-lg hover:bg-rose-100 font-bold text-xs flex items-center gap-1 transition-colors"
+                        title="Delete Patient Record"
+                      >
+                        <Trash2 size={13} />
+                        Delete
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
 
               <h3 className="text-xl font-bold text-slate-800 mb-1">{record.diagnosis}</h3>

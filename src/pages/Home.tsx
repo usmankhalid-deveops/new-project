@@ -8,6 +8,7 @@ import {
   CheckCircle2, 
   ArrowRight, 
   Shield, 
+  ShieldCheck, 
   Users, 
   HeartPulse,
   Activity,
@@ -269,7 +270,7 @@ const Home: React.FC = () => {
                 
                 <div className="mt-12 relative z-10">
                    <div className="flex items-center gap-4 text-blue-400 font-bold">
-                     <Shield Check size={20} /> End-to-end Encrypted
+                     <ShieldCheck size={20} /> End-to-end Encrypted
                    </div>
                 </div>
 

@@ -36,16 +36,19 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
     }
 
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isVerifiedDoctor() {
+      return isDoctor() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verificationStatus == 'verified';
+    }
+
     // --- Validation Blueprints ---
 
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt']) &&
-             data.keys().size() == 5 &&
-             data.uid == request.auth.uid &&
-             data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
-             data.email is string && data.email.size() <= 100 &&
-             data.role in ['patient', 'doctor'] &&
-             (data.createdAt is string || data.createdAt is timestamp);
+      return data.uid is string &&
+             data.role in ['patient', 'doctor', 'admin'];
     }
 
     function isValidDoctorProfile(data) {
@@ -91,28 +94,39 @@ service cloud.firestore {
              (data.timestamp is string || data.timestamp is timestamp);
     }
 
+    function isValidPatientEmail(data) {
+      let requiredKeys = [
+        'patientId', 'patientEmail', 'subject', 'body', 'timestamp', 
+        'doctorName', 'date', 'time', 'apptId'
+      ];
+      return data.keys().hasAll(requiredKeys) &&
+             data.patientId is string &&
+             data.patientEmail is string &&
+             data.subject is string &&
+             data.body is string &&
+             (data.timestamp is string || data.timestamp is timestamp);
+    }
+
     // --- Collection Routes ---
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn() && isDoctor();
-      allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if isOwner(userId) && 
-                      isValidUser(incoming()) && 
-                      incoming().role == existing().role; // Role is immutable
+      allow list: if isSignedIn() && (isDoctor() || isAdmin());
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /doctors/{doctorId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(doctorId) && 
-                      getAfter(/databases/$(database)/documents/users/$(doctorId)).data.role == 'doctor' && 
-                      isValidDoctorProfile(incoming());
-      allow update: if isOwner(doctorId) && isDoctor() && isValidDoctorProfile(incoming());
+      allow create: if isOwner(doctorId) || isAdmin();
+      allow update: if isOwner(doctorId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /appointments/{appointmentId} {
-      allow get: if isSignedIn() && (isOwner(existing().patientId) || isOwner(existing().doctorId));
-      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || resource.data.doctorId == request.auth.uid);
+      allow get: if isSignedIn() && (isOwner(existing().patientId) || isOwner(existing().doctorId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || resource.data.doctorId == request.auth.uid || isAdmin());
       
       allow create: if isSignedIn() && 
                       isOwner(incoming().patientId) && 
@@ -132,12 +146,25 @@ service cloud.firestore {
     }
 
     match /medicalRecords/{recordId} {
-      allow get: if isSignedIn() && (isOwner(existing().patientId) || isDoctor());
-      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || isDoctor());
+      allow get: if isSignedIn() && (isOwner(existing().patientId) || isVerifiedDoctor() || isAdmin());
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || isVerifiedDoctor() || isAdmin());
       
-      allow create: if isDoctor() && isValidMedicalRecord(incoming());
-      allow update: if isDoctor() && isOwner(existing().doctorId) && isValidMedicalRecord(incoming());
-      allow delete: if false;
+      allow create: if isVerifiedDoctor() && isValidMedicalRecord(incoming());
+      allow update: if isVerifiedDoctor() && isOwner(existing().doctorId) && isValidMedicalRecord(incoming());
+      allow delete: if isVerifiedDoctor() || isAdmin();
+    }
+
+    match /patient_emails/{emailId} {
+      allow get: if isSignedIn() && (isOwner(existing().patientId) || isDoctor() || isAdmin());
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || isDoctor() || isAdmin());
+      allow create: if isSignedIn() && (isDoctor() || isAdmin() || isOwner(incoming().patientId));
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || isOwner(existing().patientId);
+    }
+
+    match /systemSettings/{settingsId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
